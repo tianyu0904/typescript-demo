@@ -4,7 +4,7 @@ import KoaBody from "koa-body";
 import md5 from 'md5';
 import fs from "fs";
 import path from "path";
-import {MysqlHelper} from "./service/mysql.helper"
+import { MysqlHelper } from "./service/mysql.helper"
 
 const app = new Koa();
 const router = new Router();
@@ -77,14 +77,16 @@ router.post('/api/uploadsingle', async (ctx) => {
 router.get('/api/getdata', async (ctx) => {
   const mysqlConn = new MysqlHelper('test', 'user1');
   mysqlConn.connect();
-  await mysqlConn.insert({
-    "firstname": "first",
-    "lastname": "last"
-  })
-  const result = await mysqlConn.select({"id": 1});
-  console.log(result);
+  const result1 = await mysqlConn.insert({ "firstname": "first", "lastname": "last" });
+  console.log(result1);
+  const result2 = await mysqlConn.select({ "firstname": "first" });
+  console.log(result2);
+  const result3 = await mysqlConn.update({ "firstname": "first" }, { "lastname": "newlast" });
+  console.log(result3);
+  const result4 = await mysqlConn.delete({ "id": result1 });
+  console.log(result4);
 
-  ctx.body = result;
+  ctx.body = '执行完成';
 });
 
 app.use(router.routes());

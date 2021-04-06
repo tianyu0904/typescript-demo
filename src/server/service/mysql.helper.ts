@@ -42,7 +42,7 @@ export class MysqlHelper {
     });
   }
 
-  insert(insertObj: any) {
+  async insert(insertObj: any): Promise<number> {
     var addKey = [];
     var addVal = [];
     //解析insertObj对象，拆分为数组方便后续处理
@@ -71,29 +71,84 @@ export class MysqlHelper {
     str = str.substr(0, str.length - 1);
     str += ");";
     //真查询+异步回调
-    return createAsyncAction(this.conn, str)
+    const result: any = await createAsyncAction(this.conn, str);
+    return result.insertId;
   }
 
-  select(queryObj: any) {
+  async select(selectObj: any): Promise<string> {
     var str = "";
-    if (queryObj == {}) {
+    if (selectObj == {}) {
       str = `select * from ${this.table}`
     }
     else {
       str = `select * from ${this.table} where `;
       // 区分类型
-      for (var i in queryObj) {
-        if (typeof (queryObj[i]) == "string") {
-          str += `${i}='${queryObj[i]}' and `;
+      for (var i in selectObj) {
+        if (typeof (selectObj[i]) == "string") {
+          str += `${i}='${selectObj[i]}' and `;
         }
         else {
-          str += `${i}=${queryObj[i]} and `;
+          str += `${i}=${selectObj[i]} and `;
         }
       }
       // 清除最后的多余字段
       str = str.substr(0, str.length - 4);
     }
     //返回promise
-    return createAsyncAction(this.conn, str)
+    const result = await createAsyncAction(this.conn, str)
+    return JSON.stringify(result);
+  }
+
+  async update(selectObj: any, updateObj: any): Promise<number> {
+    //注意，这里的updateObj没必要把所有参数穿进去，只要把需要更新的字段和值传进来就可以，Kid就可以帮你补全剩下的数据了
+    const data: any = JSON.parse(await this.select(selectObj));
+    if (data.length == 0) {
+      throw new Error('update错误，没有匹配到数据');
+    }
+    const oldData = data[0];
+    //获取旧数据，比较新旧数据的键是否匹配
+    var str = `update ${this.table} set `;
+    for (let u in updateObj) {
+      //用旧数据的键比对传参的键
+      if (oldData[u] === undefined)
+        throw new Error('update错误，输入键和源数据不匹配');
+    }
+    //区分类型
+    for (let o in updateObj) {
+      if (typeof (updateObj[o]) == 'string')
+        str += `${o} = '${updateObj[o]}',`;
+      else
+        str += `${o} = ${oldData[o]},`;
+    }
+    str = str.substr(0, str.length - 1);
+    str += ` where `;
+    for (var i in selectObj) {
+      if (typeof (selectObj[i]) == "string") {
+        str += `${i}='${selectObj[i]}' and `;
+      }
+      else {
+        str += `${i}=${selectObj[i]} and `;
+      }
+    }
+    // 清除最后的多余字段
+    str = str.substr(0, str.length - 4);
+    const result: any = await createAsyncAction(this.conn, str);
+    return result.affectedRows;
+  }
+
+  async delete(delObj: any): Promise<number> {
+    var str = `delete from ${this.table} where `;
+    for (var i in delObj) {
+      if (typeof (delObj[i]) == "string") {
+        str += `${i}='${delObj[i]}' and `;
+      }
+      else {
+        str += `${i}=${delObj[i]} and `;
+      }
+    }
+    // 清除最后的多余字段
+    str = str.substr(0, str.length - 4);
+    const result: any = await createAsyncAction(this.conn, str);
+    return result.affectedRows;
   }
 }
